@@ -2,7 +2,7 @@ package TileFall ;
 
 use strict ;
 
-# $Id: TileFall.pm,v 1.6 2000/04/22 17:38:26 root Exp root $
+# $Id: TileFall.pm,v 1.10 2000/04/23 18:59:00 root Exp $
 
 # Copyright (c) Mark Summerfield 2000. All Rights Reserved.
 # May be used/distributed under the GPL.
@@ -34,11 +34,12 @@ use readonly
         '$MAX_DELAY'        => 1000, 
         '$DEF_BEEP'         =>    1,
         '$DEF_SHAPE'        => 'octagon',
-        '$DEF_CHANGE_SHAPE' =>    0,
+        '$DEF_CHANGE_SHAPE' => 'every game',
+        '$SHAPES'           => 'every game:every click:never',
         '$BUTTON_WIDTH'     =>   10,
         '$WIN_FILE'         => 'TILEFALL.INI',
         '$LINUX_FILE'       => '/.games/tilefallrc',
-        '$DEF_HISCORE'      => 2222,
+        '$DEF_HISCORE'      => 3333,
         '$OPTIONS'          => 
             'height:width:scale:maxcolours:beep:shape:hiscore:delay:changeshape', 
         ;
@@ -53,8 +54,10 @@ my %Shape = (
         square   => 'rectangle',
         triangle => 'triangle',
         hexagon  => 'hexagon',
-        star     => 'star',
+        star5    => 'star5',
+        star6    => 'star6',
         octagon  => 'octagon',
+        heart    => 'heart',
         ) ;
 
 my %UnShape = reverse %Shape ;
@@ -79,13 +82,17 @@ sub new_game {
         unless $self->similar_colour( $colour, @colour ) ;
     }
 
-    my $tiles = $self->get( -tiles ) ;
+    my $tiles  = $self->get( -tiles ) ;
 
+    my $height = $self->get( -height ) ;
     for( my $x = 0 ; $x < $self->get( -width ) ; $x++ ) {
-        for( my $y = 0 ; $y < $self->get( -height ) ; $y++ ) {
+        for( my $y = 0 ; $y < $height ; $y++ ) {
             $tiles->[$x][$y][$GameBoard::COLOUR] = $colour[int rand scalar @colour] ; 
         }
     }
+
+    $self->set( -shape, ( values %Shape )[rand scalar keys %Shape] ) 
+    if $self->get( -changeshape ) eq 'every game' ;
 
     $self->draw ;
     $self->centre( $window ) ;
@@ -135,7 +142,7 @@ sub click {
 
     # 3. Remove the tiles.
     my $background = $self->get( -background ) ;
-    my $points ; 
+    my $points = 0 ; 
     for( my $x = 0 ; $x <= $xmax ; $x++ ) {
         for( my $y = 0 ; $y <= $ymax ; $y++ ) {
             if( defined $list[$x][$y] ) {
@@ -145,11 +152,12 @@ sub click {
         }
     }
 
+    # Show points gained immediately
     $points = ( $points - 2 ) ** 2 ;
     $self->set( -status_display, $points ) ; 
     $self->set( -score_display, $self->get( -score_display ) + $points ) ;
 
-    # 4. Pause for a time proportional to tiles removed; show points gained.
+    # 4. Pause for a time proportional to tiles removed.
     $window->update ;
     $window->after( $self->get( -delay ) ) ; 
 
@@ -169,7 +177,7 @@ sub click {
     if( $gameover ) {
         my $bonus = $self->get( -width )  * 
                     $self->get( -height ) *  
-                    $self->get( -maxcolours ) ;
+                    ( $self->get( -maxcolours ) ** 2 ) ;
         $self->set( -status_display, $points + $bonus ) ; 
         $self->set( -score_display, $self->get( -score_display ) + $bonus ) ;
     }
@@ -187,7 +195,7 @@ sub click {
             $self->set( -hiscore_display, $score ) ;
         }
     }
-    elsif( $self->get( -changeshape ) ) {
+    elsif( $self->get( -changeshape ) eq 'every click' ) {
         $self->set( -shape, ( values %Shape )[rand scalar keys %Shape] ) ;
         $self->draw ;
     }
@@ -410,19 +418,20 @@ sub options {
     $self->options_init_keyboard ;
 
     my $widget ;
+    my $frame ;
     my $row = 0 ;
 
     $widget = $self->options_create_scale( 
                 $MIN_HEIGHT, $MAX_HEIGHT, 5, 'Height (tiles)', $row, 0 ) ;
     $Opt_height = $self->get( -height ) ;
     $widget->configure( -variable => \$Opt_height ) ;
-    $row += 2 ;
+    $row += 3 ;
 
     $widget = $self->options_create_scale( 
                 $MIN_WIDTH, $MAX_WIDTH, 5, 'Width (tiles)', $row, 0 ) ;
     $Opt_width = $self->get( -width ) ;
     $widget->configure( -variable => \$Opt_width ) ;
-    $row += 2 ;
+    $row += 3 ;
 
     $widget = $self->options_create_scale( 
                 $MIN_SCALE, $MAX_SCALE, 20, 'Scale (%)', $row, 0 ) ;
@@ -434,36 +443,52 @@ sub options {
             $self->set( -scale, $Opt_scale / 100 ) ; 
             $self->draw 
             } ) ;
-    $row += 2 ;
+    $row += 3 ;
 
     $widget = $self->options_create_scale( 
                 $MIN_DELAY, $MAX_DELAY, 200, 'Delay (millisecs)', $row, 0 ) ;
     $Opt_delay = $self->get( -delay ) ;
     $widget->configure( -variable => \$Opt_delay ) ;
-    $row += 2 ;
+
+    $row = 0 ;
 
     $widget = $self->options_create_scale( 
-                $MIN_COLOURS, $MAX_COLOURS, 1, 'Colours', $row, 0 ) ;
+                $MIN_COLOURS, $MAX_COLOURS, 1, 'Colours', $row, 3 ) ;
     $Opt_maxcolours = $self->get( -maxcolours ) ;
     $widget->configure( -variable => \$Opt_maxcolours ) ;
-    $row += 2 ;
+    $row += 3 ;
 
     $Opt_beep = $self->get( '-beep' ) ;
     $win->Checkbutton(
-        -text     => 'Beep',
-        -variable => \$Opt_beep,
-        )->grid( -row => $row, -column => 0, -columnspan => 1, -sticky => 'w' ) ;
+        -text => 'Beep', -variable => \$Opt_beep, 
+        -relief => 'ridge', -borderwidth => 2,
+        )->grid( -row => $row++, -column => 3, 
+                 -columnspan => 3, -sticky => 'nsew' ) ;
 
+    my $col = 0 ;
     $Opt_changeshape = $self->get( '-changeshape' ) ;
-    $win->Checkbutton(
-        -text     => 'Automatically change shape',
-        -variable => \$Opt_changeshape,
-        )->grid( -row => $row++, -column => 1, -columnspan => 2, -sticky => 'w' ) ;
+    $frame = $win->Frame( -relief => 'ridge', -borderwidth => 2 )->
+                grid( -row => $row, -column => 3, 
+                      -rowspan => 2, -columnspan => 3, -sticky => 'nsew' ) ;
+    $row += 2 ;
+    $frame->Label( -text => 'Change shape' )->
+        grid( -row => 0, -column => 0, -columnspan => 3, -sticky => 'w' ) ;
+    foreach my $option ( split /:/, $SHAPES ) {
+        $frame->Radiobutton(
+            -text => $option, -value => $option, -variable => \$Opt_changeshape, )->
+            grid( -row => 1, -column => $col++, -sticky => 'w' ) ;
+    }
 
     $Orig_shape = $Opt_shape = $UnShape{$self->get( -shape )} ;
-    my $col = 0 ;
+    $col = 0 ;
+    $frame = $win->Frame( -relief => 'ridge', -borderwidth => 2 )->
+                grid( -row => $row, -column => 3, 
+                      -rowspan => 2, -columnspan => 3, -sticky => 'nsew' ) ;
+    $row += 2 ;
+    $frame->Label( -text => 'Shape (if change shape is never)' )->
+        grid( -row => 0, -column => 0, -columnspan => 3, -sticky => 'w' ) ;
     foreach my $shape ( sort keys %Shape ) {
-        $win->Radiobutton( 
+        $frame->Radiobutton( 
             -text => $shape, -value => $shape, -variable => \$Opt_shape,
             -command => sub { 
                 ( $Opt_shape ) = each %Shape unless $Opt_shape ; # Paranoia
@@ -472,36 +497,32 @@ sub options {
                 } )->
             grid( -row => $row, -column => $col, -columnspan => 1, -sticky => 'w' ) ;
         $col++ ;
-        $row++, $col = 0 if $col == 3 ;
+        $row++, $col = 0 if $col == 4 ;
     }
-    $row++ ;
 
-    my $frame = $win->Frame()->
-                    grid( -row => $row, -column => 0, -columnspan => 3 ) ;
+    $frame = $win->Frame()->
+                grid( -row => $row, -column => 3, -columnspan => 3 ) ;
 
-    # Save button.
     $frame->Button(
         -text      => 'Save',
         -underline => 0,
         -width     => $BUTTON_WIDTH,
         -command   => sub { $self->options_close( 1 ) },
-        )->grid( -row => 1, -column => 1, -sticky => 'w' ) ;
+        )->grid( -row => 0, -column => 0, -sticky => 'w' ) ;
 
-    # Cancel button.
     $frame->Button(
         -text      => 'Cancel',
         -underline => 0,
         -width     => $BUTTON_WIDTH,
         -command   => sub { $self->options_close( 0 ) },
-        )->grid( -row => 1, -column => 2, -sticky => 'w' ) ;
+        )->grid( -row => 0, -column => 1, -sticky => 'w' ) ;
 
-    # Defaults button.
     $frame->Button(
         -text      => 'Defaults',
         -underline => 0,
         -width     => $BUTTON_WIDTH,
         -command   => sub { $self->options_defaults },
-        )->grid( -row => 1, -column => 3, -sticky => 'w' ) ;
+        )->grid( -row => 0, -column => 2, -sticky => 'w' ) ;
 }
 
 
@@ -512,20 +533,22 @@ sub options_init_keyboard {
     croak "is an object method" unless ref $self ;
 
     my $win = $self->get( -optionswin ) ;
+    local $_ ;
 
     # Cancel keyboard bindings.
-    $win->bind( '<Alt-c>',     sub { $self->options_close( 0 ) } ) ;
-    $win->bind( '<Control-c>', sub { $self->options_close( 0 ) } ) ;
-    $win->bind( '<Escape>',    sub { $self->options_close( 0 ) } ) ;
+    foreach( qw( <Alt-c> <Control-c> <Escape> ) ) {
+        $win->bind( $_, sub { $self->options_close( 0 ) } ) ;
+    }
 
     # Save keyboard bindings.
-    $win->bind( '<Alt-s>',     sub { $self->options_close( 1 ) } ) ;
-    $win->bind( '<Control-s>', sub { $self->options_close( 1 ) } ) ;
-    $win->bind( '<Return>',    sub { $self->options_close( 1 ) } ) ;
+    foreach( qw( <Alt-s> <Control-s> <Return> ) ) {
+        $win->bind( $_, sub { $self->options_close( 1 ) } ) ;
+    }
 
     # Defaults keyboard bindings.
-    $win->bind( '<Alt-d>',     sub { $self->options_defaults } ) ;
-    $win->bind( '<Control-d>', sub { $self->options_defaults } ) ;
+    foreach( qw( <Alt-d> <Control-d> ) ) {
+        $win->bind( $_, sub { $self->options_defaults } ) ;
+    }
 }
 
 
@@ -546,7 +569,9 @@ sub options_create_scale {
         -tickinterval => $interval,
         -label        => $title,
         '-length'     => 290,
-        )->grid( -row => $row, -column => $col, -rowspan => 2, -columnspan => 3 ) ;
+        -borderwidth  =>   2,
+        -relief       => 'ridge',
+        )->grid( -row => $row, -column => $col, -rowspan => 3, -columnspan => 3 ) ;
 
     $scale ;
 }
@@ -598,7 +623,7 @@ sub options_close {
 
 
 sub options_defaults {
-    my $self = shift ;
+    my $self  = shift ;
     my $class = ref( $self ) || $self ;
 
     croak "is an object method" unless ref $self ;
@@ -623,7 +648,7 @@ sub options_defaults {
 
 
 sub get_filename {
-    my $self = shift ;
+    my $self  = shift ;
     my $class = ref( $self ) || $self ;
 
     croak "is an object method" unless ref $self ;
@@ -643,7 +668,7 @@ sub get_filename {
 
 
 sub write_options {
-    my $self = shift ;
+    my $self  = shift ;
     my $class = ref( $self ) || $self ;
 
     croak "is an object method" unless ref $self ;
@@ -661,7 +686,7 @@ sub write_options {
         open $fh, ">$file" or die "Failed to write options file `$file': $!\n" ;
         foreach my $opt ( sort split /:/, $OPTIONS ) {
             my $val = $self->get( "-$opt" ) ;
-            next unless $val ;
+            $val = 0 unless $val ;
             $val *= 100           if $opt eq 'scale' ;
             $val = $UnShape{$val} if $opt eq 'shape' ;
             print $fh "$opt: $val\n" ;
@@ -681,7 +706,7 @@ sub write_options {
 
 
 sub read_options {
-    my $self = shift ;
+    my $self  = shift ;
     my $class = ref( $self ) || $self ;
 
     croak "is an object method" unless ref $self ;
@@ -693,6 +718,9 @@ sub read_options {
 
     my $file   = $self->get_filename ;
     my $window = $self->get( -window ) ;
+
+    $self->set( -changeshape, $DEF_CHANGE_SHAPE ) 
+    unless $self->get( -changeshape ) ;
 
     eval {
         local $_ ;
@@ -760,7 +788,13 @@ sub read_options {
                         last CASE ;
                     }
                     if( $key eq 'changeshape' ) {
-                        $self->set( -changeshape, $val =~ /^[TtYy1]/o ) ;
+                        $val = lc $val ;
+                        if( index( $SHAPES, $val ) > -1 ) {
+                            $self->set( -changeshape, $val ) ;
+                        }
+                        else {
+                            $warning = "Invalid changeshape `$val'" ;
+                        }
                         last CASE ;
                     }
                     if( $key eq 'shape' ) {

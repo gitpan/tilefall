@@ -20,7 +20,7 @@ On-line help is provided - start up the game and click the Help button or press 
 
 Perl 5.004 or higher
 Tk 800.000 or higher
-Linux/X windows or Win32
+Linux/X windows (or Win32 - untested)
 
 Non-standard modules & pragmas (all supplied):
 readonly.pm
@@ -53,6 +53,11 @@ a file called 'TILEFALL.INI' in the directory it is invoked from.
 
 Note that TileFall can be installed pretty well anywhere - the only restriction
 is that all the files must be together in the same directory.
+
+(If you're upgrading from 1.00 you may get a couple of harmless ignorable
+error messages the first time you run because the configuration file has
+changed slightly.)
+
 
 # Create the directories.
 mkdir /usr/games
@@ -98,6 +103,27 @@ update-menus
 
 
 5. CHANGES
+
+2000/04/23
+
+Added a couple more shapes.
+
+
+2000/04/22
+
+Changed the changeshape option; you now have the choice of per game, per click
+or never (i.e. set your own).
+Changed the layout of the options dialogue.
+
+
+2000/04/22
+
+Corrected a bug which meant that some options weren't being saved.
+Increased the benefit on the bonus for larger numbers of colours. 
+Efficiency improvements.
+Upped the starting hi-score...
+Tried (again) to ensure colours aren't too similar.
+
 
 2000/04/22
 

@@ -1,6 +1,6 @@
 package GameBoard ;
 
-# $Id: GameBoard.pm,v 1.6 2000/04/22 16:31:34 root Exp $
+# $Id: GameBoard.pm,v 1.9 2000/04/23 18:59:00 root Exp $
 
 # Copyright (c) Mark Summerfield 2000. All Rights Reserved.
 # May be used/distributed under the GPL.
@@ -31,7 +31,7 @@ use readonly
         '$DEF_OUTLINE_COLOUR'      => '#DFDFDF', # grey80
         '$DEF_MAX_COLOURS'         =>   3,
         '$DEF_SHAPE'               => 'octagon', 
-        '$DEF_BUTTON_NEW'          =>   1,
+        '$DEF_BUTTON_NEW'          =>   1, # 0 means use Start + Pause/Resume
 
         '$BUTTON_WIDTH'            =>  10,
         '$BUTTON_NEW'              => 'New',
@@ -118,7 +118,7 @@ sub new { # Class and object method
 
 
 sub DESTROY {
-    ;
+    ; # Save's time.
 }
 
 
@@ -159,7 +159,7 @@ sub set { # Object method
         croak "x and y coords required" unless defined $x and defined $y ;
         # We do NOT range check
         $self->{-tiles}[$x][$y][$COLOUR] = $colour ; 
-        if( $colour =~ /^#[\dA-Fa-f]+$/o ) {
+        if( $colour =~ /^#[\dA-Fa-f]{6}$/o ) {
             $self->{-canvas}->itemconfigure(
                 $self->{-tiles}[$x][$y][$TILE], -fill => $colour, ) ;
         }
@@ -176,7 +176,7 @@ sub set { # Object method
 
 
 sub init_buttons { # Object method
-    my $self = shift ;
+    my $self  = shift ;
     my $class = ref( $self ) || $self ;
 
     croak "is an object method" unless ref $self ;
@@ -297,14 +297,11 @@ sub init_board { # Object method
 
     croak "is an object method" unless ref $self ;
 
-    my $width  = $self->get( -width ) ;
-    my $height = $self->get( -height ) ;
-    my $length = $self->get( '-length' ) ;
-    my $scale  = $self->get( -scale ) ;
+    my $ratio = $self->get( '-length' ) * $self->get( -scale ) ;
 
     $self->set( -canvas, $self->get( -window )->
-            Canvas( -width  => $width  * $length * $scale, 
-                    -height => $height * $length * $scale, 
+            Canvas( -width  => $self->get( -width )  * $ratio, 
+                    -height => $self->get( -height ) * $ratio, 
                     )->pack() ) ;
 
     my @tile ;
@@ -332,19 +329,21 @@ sub draw {
 
     $canvas->delete( 'all' ) ;
 
+    my $ratio = $len * $scale ;
+
     $canvas->configure(
-        -width  => $width  * $len * $scale,
-        -height => $height * $len * $scale,
+        -width  => $width  * $ratio,
+        -height => $height * $ratio,
         ) ; 
 
     # Precalculate in case needed
-    my $len_by_2         = $len / 2 ;
-    my $len_by_3         = $len / 3 ;
-    my $len_by_3_cross_2 = $len_by_3 * 2 ;
-    my $len_by_4         = $len / 4 ;
-    my $len_by_4_cross_3 = $len_by_4 * 3 ;
-    my $len_by_5         = $len / 5 ;
-    my $len_by_5_cross_4 = $len_by_5 * 4 ;
+    my $half           = $len     / 2 ;
+    my $third          = $len     / 3 ;
+    my $two_thirds     = $third   * 2 ;
+    my $quarter        = $len     / 4 ;
+    my $three_quarters = $quarter * 3 ;
+    my $fifth          = $len     / 5 ;
+    my $four_fifths    = $fifth   * 4 ;
 
     for( my $x = 0 ; $x < $width ; $x++ ) {
         my $xpos = $x    * $len ;
@@ -357,58 +356,90 @@ sub draw {
             if( $shape eq 'oval' or $shape eq 'rectangle' ) {
                 $tile->[$x][$y][$TILE] = 
                     $canvas->create( $shape, 
-                        $xpos, $ypos, $Xpos, $ypos + $len,
+                        $xpos, $ypos, 
+                        $Xpos, $Ypos,
                         -fill => $colour, -outline => $outline,) ;
                 next TILE ;
             }
             elsif( $shape eq 'triangle' ) {
                 $tile->[$x][$y][$TILE] = 
                     $canvas->create( 'polygon', 
-                        $xpos, $Ypos, 
-                        $xpos + $len_by_2, $ypos,
-                        $Xpos, $Ypos,
+                        $xpos,         $Ypos, 
+                        $xpos + $half, $ypos,
+                        $Xpos,         $Ypos,
                         -fill => $colour, -outline => $outline,) ;
                 next TILE ;
             }
             elsif( $shape eq 'hexagon' ) {
                 $tile->[$x][$y][$TILE] = 
                     $canvas->create( 'polygon', 
-                        $xpos, $ypos + $len_by_5, 
-                        $xpos + $len_by_2, $ypos,
-                        $Xpos, $ypos + $len_by_5,
-                        $Xpos, $ypos + $len_by_5_cross_4,
-                        $xpos + $len_by_2, $Ypos,
-                        $xpos, $ypos + $len_by_5_cross_4,
+                        $xpos,         $ypos + $fifth, 
+                        $xpos + $half, $ypos,
+                        $Xpos,         $ypos + $fifth,
+                        $Xpos,         $ypos + $four_fifths,
+                        $xpos + $half, $Ypos,
+                        $xpos,         $ypos + $four_fifths,
                         -fill => $colour, -outline => $outline,) ;
                 next TILE ;
             }
-            elsif( $shape eq 'star' ) {
+            elsif( $shape eq 'star5' ) {
                 $tile->[$x][$y][$TILE] = 
                     $canvas->create( 'polygon', 
-                        $xpos, $ypos + $len_by_3, 
-                        $xpos + $len_by_3, $ypos + $len_by_3,
-                        $xpos + $len_by_2, $ypos,
-                        $xpos + $len_by_3_cross_2, $ypos + $len_by_3,
-                        $Xpos, $ypos + $len_by_3,
-                        $xpos + $len_by_4_cross_3, $ypos + $len_by_2,
-                        $Xpos, $Ypos,
-                        $xpos + $len_by_2, $ypos + $len_by_3_cross_2,
-                        $xpos, $Ypos,
-                        $xpos + $len_by_4, $ypos + $len_by_2,
+                        $xpos,                   $ypos + $third, 
+                        $xpos + $third,          $ypos + $third,
+                        $xpos + $half,           $ypos,
+                        $xpos + $two_thirds,     $ypos + $third,
+                        $Xpos,                   $ypos + $third,
+                        $xpos + $three_quarters, $ypos + $half,
+                        $Xpos,                   $Ypos,
+                        $xpos + $half,           $ypos + $two_thirds,
+                        $xpos,                   $Ypos,
+                        $xpos + $quarter,        $ypos + $half,
                         -fill => $colour, -outline => $outline,) ;
                 next TILE ;
             }
             elsif( $shape eq 'octagon' ) {
                 $tile->[$x][$y][$TILE] = 
                     $canvas->create( 'polygon', 
-                        $xpos, $ypos + $len_by_4,
-                        $xpos + $len_by_4, $ypos,
-                        $xpos + $len_by_4_cross_3, $ypos,
-                        $Xpos, $ypos + $len_by_4,
-                        $Xpos, $ypos + $len_by_4_cross_3,
-                        $xpos + $len_by_4_cross_3, $Ypos,
-                        $xpos + $len_by_4, $Ypos,
-                        $xpos, $ypos + $len_by_4_cross_3,
+                        $xpos,                   $ypos + $quarter,
+                        $xpos + $quarter,        $ypos,
+                        $xpos + $three_quarters, $ypos,
+                        $Xpos,                   $ypos + $quarter,
+                        $Xpos,                   $ypos + $three_quarters,
+                        $xpos + $three_quarters, $Ypos,
+                        $xpos + $quarter,        $Ypos,
+                        $xpos,                   $ypos + $three_quarters,
+                        -fill => $colour, -outline => $outline,) ;
+                next TILE ;
+            }
+            elsif( $shape eq 'heart' ) {
+                $tile->[$x][$y][$TILE] = 
+                    $canvas->create( 'polygon', 
+                        $xpos,                   $ypos + $third,
+                        $xpos + $quarter,        $ypos,
+                        $xpos + $half,           $ypos + $quarter,
+                        $xpos + $three_quarters, $ypos,
+                        $Xpos,                   $ypos + $third,
+                        $xpos + $half,           $Ypos,
+                        -smooth => 1, -splinesteps => 4,
+                        -fill => $colour, -outline => $outline,) ;
+                next TILE ;
+            }
+            elsif( $shape eq 'star6' ) {
+                $tile->[$x][$y][$TILE] = 
+                    $canvas->create( 'polygon', 
+                        $xpos,                   $ypos + $quarter,
+                        $xpos + $third,          $ypos + $quarter,
+                        $xpos + $half,           $ypos,
+                        $xpos + $two_thirds,     $ypos + $quarter,
+                        $Xpos,                   $ypos + $quarter,
+                        $xpos + $three_quarters, $ypos + $half,
+                        $Xpos,                   $ypos + $three_quarters,
+                        $xpos + $two_thirds,     $ypos + $three_quarters,
+                        $xpos + $half,           $Ypos,
+                        $xpos + $third,          $ypos + $three_quarters,
+                        $xpos,                   $ypos + $three_quarters,
+                        $xpos + $quarter,        $ypos + $half,
                         -fill => $colour, -outline => $outline,) ;
                 next TILE ;
             }
@@ -510,7 +541,8 @@ sub get_rand_colour {
         my $green = int( rand( 0xFF ) ) ;
         my $blue  = int( rand( 0xFF ) ) ;
     
-        next if $red == $green and $green == $blue ; # Don't return grey
+        next if ( abs( $red   - $green ) < 16 and 
+                  abs( $green - $blue  ) < 16 ) ; # Don't return grey
 
         my $colour = sprintf "#%02X%02X%02X", $red, $green, $blue ;
 
@@ -526,21 +558,19 @@ sub similar_colour {
 
     die "is an object method" unless ref $self ;
 
-    # We deem a colour to be similar if the difference in RGB values is < 128
+    # We deem a colour to be similar if the difference in RGB values is <= 192
     # We do NOT check that the hex string is valid.
 
     my $colour = shift ;
-    my( $red, $green, $blue ) = $colour =~ /^#(..)(..)(..)$/o ;
-    ( $red, $green, $blue ) = ( hex( $red ), hex( $green ), hex( $blue ) ) ;
-
-    my @colour = @_ ;
+    $colour =~ /^#(..)(..)(..)$/o ;
+    my( $red, $green, $blue ) = ( hex( $1 ), hex( $2 ), hex( $3 ) ) ; 
 
     local $_ ;
-    foreach ( @colour ) {
-        my( $r, $g, $b ) = /^#(..)(..)(..)$/o ;
-        ( $r, $g, $b ) = ( hex( $r ), hex( $g ), hex( $b ) ) ;
-        return 1 
-        if ( abs( $red - $r ) + abs( $green - $g ) + abs( $blue - $b ) ) < 128 ;
+    foreach ( @_ ) {
+        /^#(..)(..)(..)$/o ;
+        return 1 unless ( abs( $red   - hex( $1 ) ) +
+                          abs( $green - hex( $2 ) ) +
+                          abs( $blue  - hex( $3 ) ) ) > 192 ;
     }
 
     0 ;

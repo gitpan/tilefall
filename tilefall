@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: tilefall,v 1.10 2000/04/22 17:38:26 root Exp root $
+# $Id: tilefall,v 1.13 2000/04/23 21:17:27 root Exp root $
 
 # Copyright (c) Mark Summerfield 2000. All Rights Reserved.
 # May be used/distributed under the GPL.
@@ -15,7 +15,7 @@ use Tk ;
 
 
 use vars qw( $VERSION ) ;
-$VERSION = '1.00' ; 
+$VERSION = '1.10' ; 
 
 use readonly '$DIE_ON_WARN' => 1 ;
 
@@ -34,10 +34,7 @@ sub initialise {
     $Win->title( "TileFall" ) ; 
     $Win->protocol( "WM_DELETE_WINDOW", \&quit ) ;
  
-    # Read in config file for user's default options.
-    # For now we'll hard-code
-
-    $TileFall = TileFall->new( -window => $Win, -quit => \&quit, ) ;
+    $TileFall = TileFall->new( -window => $Win, -quit => \&quit ) ;
     $TileFall->get( -canvas )->
         Tk::bind( '<1>', [ \&click1, Ev( 'x' ), Ev( 'y' ) ] ) ;
     $TileFall->read_options ;
@@ -55,7 +52,8 @@ sub click1 {
 
     $TileFall->click( 
         int( $canvas->canvasx( $cx ) / $ratio ), 
-        int( $canvas->canvasy( $cy ) / $ratio ) ) ;
+        int( $canvas->canvasy( $cy ) / $ratio ) 
+        ) ;
 }
 
 

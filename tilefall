@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: tilefall,v 1.13 2000/04/23 21:17:27 root Exp root $
+# $Id: tilefall,v 1.14 2000/04/24 13:56:37 root Exp $
 
 # Copyright (c) Mark Summerfield 2000. All Rights Reserved.
 # May be used/distributed under the GPL.
@@ -15,7 +15,7 @@ use Tk ;
 
 
 use vars qw( $VERSION ) ;
-$VERSION = '1.10' ; 
+$VERSION = '1.11' ; 
 
 use readonly '$DIE_ON_WARN' => 1 ;
 

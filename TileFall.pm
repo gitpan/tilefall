@@ -2,7 +2,7 @@ package TileFall ;
 
 use strict ;
 
-# $Id: TileFall.pm,v 1.10 2000/04/23 18:59:00 root Exp $
+# $Id: TileFall.pm,v 1.11 2000/04/24 13:56:37 root Exp $
 
 # Copyright (c) Mark Summerfield 2000. All Rights Reserved.
 # May be used/distributed under the GPL.
@@ -35,11 +35,11 @@ use readonly
         '$DEF_BEEP'         =>    1,
         '$DEF_SHAPE'        => 'octagon',
         '$DEF_CHANGE_SHAPE' => 'every game',
-        '$SHAPES'           => 'every game:every click:never',
+        '$CHANGE_SHAPE'     => 'every game:every click:never',
         '$BUTTON_WIDTH'     =>   10,
         '$WIN_FILE'         => 'TILEFALL.INI',
         '$LINUX_FILE'       => '/.games/tilefallrc',
-        '$DEF_HISCORE'      => 3333,
+        '$DEF_HISCORE'      => 9999,
         '$OPTIONS'          => 
             'height:width:scale:maxcolours:beep:shape:hiscore:delay:changeshape', 
         ;
@@ -48,19 +48,6 @@ my( $Opt_height, $Opt_width, $Opt_scale, $Opt_maxcolours, $Opt_delay,
     $Opt_beep, $Opt_shape, $Opt_changeshape ) ;
 
 my( $Orig_shape, $Orig_scale ) ;
-
-my %Shape = (
-        circle   => 'oval',
-        square   => 'rectangle',
-        triangle => 'triangle',
-        hexagon  => 'hexagon',
-        star5    => 'star5',
-        star6    => 'star6',
-        octagon  => 'octagon',
-        heart    => 'heart',
-        ) ;
-
-my %UnShape = reverse %Shape ;
 
 
 sub new_game { 
@@ -91,7 +78,7 @@ sub new_game {
         }
     }
 
-    $self->set( -shape, ( values %Shape )[rand scalar keys %Shape] ) 
+    $self->set( -shape, ( $self->get( -shapes ) )[rand scalar $self->get( -shapes )] ) 
     if $self->get( -changeshape ) eq 'every game' ;
 
     $self->draw ;
@@ -196,7 +183,8 @@ sub click {
         }
     }
     elsif( $self->get( -changeshape ) eq 'every click' ) {
-        $self->set( -shape, ( values %Shape )[rand scalar keys %Shape] ) ;
+        $self->set( -shape, 
+            ( $self->get( -shapes ) )[rand scalar $self->get( -shapes )] ) ;
         $self->draw ;
     }
 
@@ -382,17 +370,10 @@ If you clear the board you also get a bonus proportional
 to the board size times the number of colours.
 
 TileFall v $::VERSION
-
 www.perlpress.com
-
 Copyright (c) Mark Summerfield 2000. 
 All Rights Reserved.
-
 May be used/distributed under the GPL.
-
-This game is based on TileFall which was originally written 
-for the Amiga and Psion by Adam Dawes
-www.electrolyte.demon.co.uk
 EOT
 
     my $msg = $self->get( -window )->
@@ -473,27 +454,29 @@ sub options {
     $row += 2 ;
     $frame->Label( -text => 'Change shape' )->
         grid( -row => 0, -column => 0, -columnspan => 3, -sticky => 'w' ) ;
-    foreach my $option ( split /:/, $SHAPES ) {
+    foreach my $option ( split /:/, $CHANGE_SHAPE ) {
         $frame->Radiobutton(
             -text => $option, -value => $option, -variable => \$Opt_changeshape, )->
             grid( -row => 1, -column => $col++, -sticky => 'w' ) ;
     }
 
-    $Orig_shape = $Opt_shape = $UnShape{$self->get( -shape )} ;
+    $Orig_shape = $Opt_shape = $self->get( -shape ) ;
     $col = 0 ;
     $frame = $win->Frame( -relief => 'ridge', -borderwidth => 2 )->
                 grid( -row => $row, -column => 3, 
-                      -rowspan => 2, -columnspan => 3, -sticky => 'nsew' ) ;
+                      -rowspan => 4, -columnspan => 3, -sticky => 'nsew' ) ;
     $row += 2 ;
     $frame->Label( -text => 'Shape (if change shape is never)' )->
         grid( -row => 0, -column => 0, -columnspan => 3, -sticky => 'w' ) ;
-    foreach my $shape ( sort keys %Shape ) {
+    foreach my $shape ( sort $self->get( -shapes ) ) {
         $frame->Radiobutton( 
             -text => $shape, -value => $shape, -variable => \$Opt_shape,
             -command => sub { 
-                ( $Opt_shape ) = each %Shape unless $Opt_shape ; # Paranoia
-                $self->set( -shape, $Shape{$Opt_shape} ) ; 
-                $self->draw 
+                $win->configure( -cursor => 'watch' ) ;
+                $Opt_shape = $DEF_SHAPE unless $Opt_shape ; # Paranoia
+                $self->set( -shape, $Opt_shape ) ; 
+                $self->draw ;
+                $win->configure( -cursor => 'left_ptr' ) ;
                 } )->
             grid( -row => $row, -column => $col, -columnspan => 1, -sticky => 'w' ) ;
         $col++ ;
@@ -595,7 +578,7 @@ sub options_close {
               $Opt_maxcolours != $self->get( -maxcolours ) ) ;
 
         my $redraw = ( ( $Opt_scale != $self->get( -scale ) * 100 ) or
-                       ( $Shape{$Opt_shape} ne $self->get( -shape ) ) ) ;
+                       ( $Opt_shape ne $self->get( -shape ) ) ) ;
 
         $self->set( -height,      $Opt_height ) ;
         $self->set( -width,       $Opt_width ) ;
@@ -603,7 +586,7 @@ sub options_close {
         $self->set( -maxcolours,  $Opt_maxcolours ) ;
         $self->set( -delay,       $Opt_delay ) ;
         $self->set( '-beep',      $Opt_beep ) ;
-        $self->set( -shape,       $Shape{$Opt_shape} ) ;
+        $self->set( -shape,       $Opt_shape ) ;
         $self->set( -changeshape, $Opt_changeshape ) ;
 
         if( $new_game ) {
@@ -638,9 +621,9 @@ sub options_defaults {
     $Opt_changeshape = $DEF_CHANGE_SHAPE ;
 
     my $redraw = ( ( $Opt_scale != $self->get( -scale ) * 100 ) or
-                   ( $Shape{$Opt_shape} ne $self->get( -shape ) ) ) ;
+                   ( $Opt_shape ne $self->get( -shape ) ) ) ;
 
-    $self->set( -shape, $Shape{$Opt_shape} ) ;
+    $self->set( -shape, $Opt_shape ) ;
     $self->set( -scale, $Opt_scale / 100 ) ;
 
     $self->draw if $redraw ;
@@ -687,8 +670,7 @@ sub write_options {
         foreach my $opt ( sort split /:/, $OPTIONS ) {
             my $val = $self->get( "-$opt" ) ;
             $val = 0 unless $val ;
-            $val *= 100           if $opt eq 'scale' ;
-            $val = $UnShape{$val} if $opt eq 'shape' ;
+            $val *= 100 if $opt eq 'scale' ;
             print $fh "$opt: $val\n" ;
         }
         close $fh or die "Failed to close options file `$file': $!\n" ;
@@ -730,57 +712,37 @@ sub read_options {
         while( <$fh> ) {
             chomp ;
             my( $key, $val ) = split /\s*:\s*/, $_, 2 ;
-            my $warning ;
             if( index( $OPTIONS, $key ) > -1 ) {
                 CASE : {
                     if( $key eq 'height' ) {
-                        $val = int( $val ) ;
-                        if( $val >= $MIN_HEIGHT and $val <= $MAX_HEIGHT ) { 
-                            $self->set( -height, $val ) ;
-                        }
-                        else {
-                            $warning = "Invalid height `$val'" ;
-                        }
+                        $self->set( -height, 
+                            $self->valid_int( 
+                                $val, $DEF_HEIGHT, $MIN_HEIGHT, $MAX_HEIGHT ) ) ;
                         last CASE ;
                     }
                     if( $key eq 'width' ) {
-                        $val = int( $val ) ;
-                        if( $val >= $MIN_WIDTH and $val <= $MAX_WIDTH ) {
-                            $self->set( -width, $val ) ;
-                        }
-                        else {
-                            $warning = "Invalid width `$val'" ;
-                        }
+                        $self->set( -width, 
+                            $self->valid_int( 
+                                $val, $DEF_WIDTH, $MIN_WIDTH, $MAX_WIDTH ) ) ;
                         last CASE ;
                     }
                     if( $key eq 'scale' ) {
-                        $val = int( $val ) ;
-                        if( $val >= $MIN_SCALE and $val <= $MAX_SCALE ) {
-                            $self->set( -scale, $val / 100 ) ;
-                        }
-                        else {
-                            $warning = "Invalid scale `$val'" ;
-                        }
+                        $self->set( -scale, 
+                            $self->valid_int( 
+                                $val, $DEF_SCALE, $MIN_SCALE, $MAX_SCALE ) 
+                                / 100 ) ;
                         last CASE ;
                     }
                     if( $key eq 'maxcolours' ) {
-                        $val = int( $val ) ;
-                        if( $val >= $MIN_COLOURS and $val <= $MAX_COLOURS ) {
-                            $self->set( -maxcolours, $val ) ;
-                        }
-                        else {
-                            $warning = "Invalid maxcolours `$val'" ;
-                        }
+                        $self->set( -maxcolours, 
+                            $self->valid_int( 
+                                $val, $DEF_COLOURS, $MIN_COLOURS, $MAX_COLOURS ) ) ;
                         last CASE ;
                     }
                     if( $key eq 'delay' ) {
-                        $val = int( $val ) ;
-                        if( $val >= $MIN_DELAY and $val <= $MAX_DELAY ) {
-                            $self->set( -delay, $val ) ;
-                        }
-                        else {
-                            $warning = "Invalid delay `$val'" ;
-                        }
+                        $self->set( -delay, 
+                            $self->valid_int( 
+                                $val, $DEF_DELAY, $MIN_DELAY, $MAX_DELAY ) ) ;
                         last CASE ;
                     }
                     if( $key eq 'beep' ) {
@@ -788,23 +750,15 @@ sub read_options {
                         last CASE ;
                     }
                     if( $key eq 'changeshape' ) {
-                        $val = lc $val ;
-                        if( index( $SHAPES, $val ) > -1 ) {
-                            $self->set( -changeshape, $val ) ;
-                        }
-                        else {
-                            $warning = "Invalid changeshape `$val'" ;
-                        }
+                        $self->set( -changeshape, 
+                            $self->valid_array_element(
+                                $val, $DEF_CHANGE_SHAPE, split /:/, $CHANGE_SHAPE ) ) ;
                         last CASE ;
                     }
                     if( $key eq 'shape' ) {
-                        $val = lc $val ;
-                        if( exists $Shape{$val} ) {
-                            $self->set( -shape, $Shape{$val} ) ;
-                        }
-                        else {
-                            $warning = "Invalid shape `$val'" ;
-                        }
+                        $self->set( -shape, 
+                            $self->valid_array_element(
+                                $val, $DEF_SHAPE, $self->get( -shapes ) ) ) ;
                         last CASE ;
                     }
                     if( $key eq 'hiscore' ) {
@@ -813,17 +767,6 @@ sub read_options {
                         last CASE ;
                     }
                 }
-            }
-            else {
-                $warning = "Invalid key `$key'" ;
-            }
-            if( defined $warning ) {
-                $msg = $window->MesgBox(
-                        -title => 'TileFall Error',
-                        -text  => $warning,
-                        -icon  => 'error',
-                        ) ;
-                $msg->Show ;
             }
         }
         close $fh or die "Failed to close options file `$file': $!\n" ;

@@ -54,11 +54,6 @@ a file called 'TILEFALL.INI' in the directory it is invoked from.
 Note that TileFall can be installed pretty well anywhere - the only restriction
 is that all the files must be together in the same directory.
 
-(If you're upgrading from 1.00 you may get a couple of harmless ignorable
-error messages the first time you run because the configuration file has
-changed slightly.)
-
-
 # Create the directories.
 mkdir /usr/games
 mkdir /usr/games/tilefall
@@ -103,6 +98,11 @@ update-menus
 
 
 5. CHANGES
+
+2000/04/24
+
+Added a couple more shapes plus a random shape option.
+
 
 2000/04/23
 

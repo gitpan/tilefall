@@ -1,5 +1,5 @@
 /* XPM */
-/* $Id: tilefall-icon-16x16.xpm,v 1.1 2000/04/22 17:03:08 root Exp root $ */
+/* $Id: tilefall-icon-16x16.xpm,v 1.2 2000/04/24 13:56:37 root Exp $ */
 static char * tilefall_icon_16x16_xpm[] = {
 "16 16 5 1",
 "  c None",

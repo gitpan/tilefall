@@ -1,6 +1,6 @@
 package GameBoard ;
 
-# $Id: GameBoard.pm,v 1.9 2000/04/23 18:59:00 root Exp $
+# $Id: GameBoard.pm,v 1.12 2000/04/24 14:12:34 root Exp root $
 
 # Copyright (c) Mark Summerfield 2000. All Rights Reserved.
 # May be used/distributed under the GPL.
@@ -10,7 +10,7 @@ use strict ;
 use Carp ;
 
 use vars qw( $VERSION ) ;
-$VERSION = '0.01' ;
+$VERSION = '0.02' ;
 
 
 use readonly
@@ -30,8 +30,10 @@ use readonly
         '$DEF_BACKGROUND_COLOUR'   => '#FFFFFF', # white
         '$DEF_OUTLINE_COLOUR'      => '#DFDFDF', # grey80
         '$DEF_MAX_COLOURS'         =>   3,
-        '$DEF_SHAPE'               => 'octagon', 
         '$DEF_BUTTON_NEW'          =>   1, # 0 means use Start + Pause/Resume
+        '$DEF_SHAPE'               => 'octagon', 
+        '$SHAPES'                  => 'circle:square:triangle:hexagon:star5:star6:' .
+                                      'octagon:heart:random:pie:spiral1:spiral2',
 
         '$BUTTON_WIDTH'            =>  10,
         '$BUTTON_NEW'              => 'New',
@@ -139,6 +141,10 @@ sub get { # Object method
     }
     elsif( $field =~ /_display$/o ) {
         $self->{$field}->cget( -text ) ;
+    }
+    elsif( $field eq '-shapes' ) {
+        my @shape = split /:/, $SHAPES ;
+        wantarray ? @shape : scalar @shape ;
     }
     else {
         $self->{$field} ;
@@ -317,15 +323,27 @@ sub draw {
 
     croak "is an object method" unless ref $self ;
 
-    my $width      = $self->get( -width ) ;
-    my $height     = $self->get( -height ) ;
-    my $len        = $self->get( '-length' ) ;
-    my $scale      = $self->get( -scale ) ;
-    my $background = $self->get( -background ) ;
-    my $outline    = $self->get( -outline ) ;
-    my $canvas     = $self->get( -canvas ) ;
-    my $tile       = $self->get( -tiles ) ;
-    my $shape      = $self->get( -shape ) ;
+    my $width       = $self->get( -width ) ;
+    my $height      = $self->get( -height ) ;
+    my $len         = $self->get( '-length' ) ;
+    my $scale       = $self->get( -scale ) ;
+    my $background  = $self->get( -background ) ;
+    my $outline     = $self->get( -outline ) ;
+    my $canvas      = $self->get( -canvas ) ;
+    my $tile        = $self->get( -tiles ) ;
+    my $shape       = $self->get( -shape ) ;
+    my @shape       = map { 
+                        $_ eq 'random' ? () : 
+                            $_ eq 'circle' ? 'oval' :
+                                $_ eq 'square' ? 'rectangle' :
+                                    $_
+                        } $self->get( -shapes ) ;
+    my $shape_count = scalar @shape ;
+    my $random      = $shape eq 'random' ? 1 : 0 ;
+
+    $shape = 'oval'      if $shape eq 'circle' ;
+    $shape = 'rectangle' if $shape eq 'square' ;
+    my $smooth = $shape eq 'spiral2' ? 1 : 0 ;
 
     $canvas->delete( 'all' ) ;
 
@@ -350,15 +368,25 @@ sub draw {
         my $Xpos = $xpos + $len ;
         TILE:
         for( my $y = 0 ; $y < $height ; $y++ ) {
-            my $ypos = $y    * $len ;
-            my $Ypos = $ypos + $len ;
+            my $ypos   = $y    * $len ;
+            my $Ypos   = $ypos + $len ;
             my $colour = $tile->[$x][$y][$COLOUR] ||= $background ;
+            $shape     = $shape[rand $shape_count] if $random ;
             if( $shape eq 'oval' or $shape eq 'rectangle' ) {
                 $tile->[$x][$y][$TILE] = 
                     $canvas->create( $shape, 
                         $xpos, $ypos, 
                         $Xpos, $Ypos,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
+                next TILE ;
+            }
+            if( $shape eq 'pie' ) {
+                $tile->[$x][$y][$TILE] = 
+                    $canvas->create( 'arc', 
+                        $xpos, $ypos, 
+                        $Xpos, $Ypos,
+                        -extent => -310,
+                        -fill => $colour, -outline => $outline ) ;
                 next TILE ;
             }
             elsif( $shape eq 'triangle' ) {
@@ -367,7 +395,7 @@ sub draw {
                         $xpos,         $Ypos, 
                         $xpos + $half, $ypos,
                         $Xpos,         $Ypos,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
                 next TILE ;
             }
             elsif( $shape eq 'hexagon' ) {
@@ -379,7 +407,7 @@ sub draw {
                         $Xpos,         $ypos + $four_fifths,
                         $xpos + $half, $Ypos,
                         $xpos,         $ypos + $four_fifths,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
                 next TILE ;
             }
             elsif( $shape eq 'star5' ) {
@@ -395,7 +423,7 @@ sub draw {
                         $xpos + $half,           $ypos + $two_thirds,
                         $xpos,                   $Ypos,
                         $xpos + $quarter,        $ypos + $half,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
                 next TILE ;
             }
             elsif( $shape eq 'octagon' ) {
@@ -409,7 +437,7 @@ sub draw {
                         $xpos + $three_quarters, $Ypos,
                         $xpos + $quarter,        $Ypos,
                         $xpos,                   $ypos + $three_quarters,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
                 next TILE ;
             }
             elsif( $shape eq 'heart' ) {
@@ -422,7 +450,7 @@ sub draw {
                         $Xpos,                   $ypos + $third,
                         $xpos + $half,           $Ypos,
                         -smooth => 1, -splinesteps => 4,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
                 next TILE ;
             }
             elsif( $shape eq 'star6' ) {
@@ -440,7 +468,44 @@ sub draw {
                         $xpos + $third,          $ypos + $three_quarters,
                         $xpos,                   $ypos + $three_quarters,
                         $xpos + $quarter,        $ypos + $half,
-                        -fill => $colour, -outline => $outline,) ;
+                        -fill => $colour, -outline => $outline ) ;
+                next TILE ;
+            }
+            elsif( $shape eq 'spiral1' or $shape eq 'spiral2' ) {
+                # Not convinced its faster to precalculate since you'd have to
+                # do it for every tile and would be doing a lot of memory
+                # allocation.
+                $smooth = int rand 2 if $random ;
+                $tile->[$x][$y][$TILE] = 
+                    $canvas->createLine( 
+                        $xpos,      $ypos,
+                        $Xpos,      $ypos,
+                        $Xpos,      $Ypos,
+                        $xpos +  3, $Ypos,
+                        $xpos +  3, $ypos +  3,
+                        $Xpos -  3, $ypos +  3,
+                        $Xpos -  3, $Ypos -  3,
+                        $xpos +  6, $Ypos -  3,
+                        $xpos +  6, $ypos +  6,
+                        $Xpos -  6, $ypos +  6,
+                        $Xpos -  6, $Ypos -  6,
+                        $xpos +  9, $Ypos -  6,
+                        $xpos +  9, $ypos +  9,
+                        $Xpos -  9, $ypos +  9,
+                        $Xpos -  9, $Ypos -  9,
+                        $xpos + 12, $Ypos -  9,
+                        $xpos + 12, $ypos + 12,
+                        $Xpos - 12, $ypos + 12,
+                        $Xpos - 12, $Ypos - 12,
+                        $xpos + 15, $Ypos - 12,
+                        $xpos + 15, $ypos + 15,
+                        $Xpos - 15, $ypos + 15,
+                        $Xpos - 15, $Ypos - 15,
+                        $xpos + 18, $Ypos - 15,
+                        $xpos + 18, $ypos + 18,
+                        $Xpos - 18, $ypos + 18,
+                        -smooth => $smooth, 
+                        -fill => $colour, -width => 2 ) ;
                 next TILE ;
             }
         }
@@ -574,6 +639,36 @@ sub similar_colour {
     }
 
     0 ;
+}
+
+
+sub valid_int {
+    my $self  = shift ;
+    my $class = ref( $self ) || $self ;
+
+    croak "is an object method" unless ref $self ;
+
+    my( $val, $def, $min, $max ) = @_ ;
+    $val = int $val ;
+
+    ( $val >= $min and $val <= $max ) ? $val : $def ;
+}
+
+
+sub valid_array_element {
+    my $self  = shift ;
+    my $class = ref( $self ) || $self ;
+
+    croak "is an object method" unless ref $self ;
+
+    my $val   = lc shift ;
+    my $def   = shift ;
+
+    foreach my $element ( @_ ) {
+        return $val if $val eq $element ;
+    }
+
+    $def ;
 }
 
 

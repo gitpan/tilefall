@@ -1,0 +1,114 @@
+#!/usr/bin/perl -w
+
+# $Id: tilefall,v 1.10 2000/04/22 17:38:26 root Exp root $
+
+# Copyright (c) Mark Summerfield 2000. All Rights Reserved.
+# May be used/distributed under the GPL.
+
+use strict ;
+
+use FindBin qw( $RealBin ) ;
+use lib $RealBin ;
+
+use TileFall ;
+use Tk ;
+
+
+use vars qw( $VERSION ) ;
+$VERSION = '1.00' ; 
+
+use readonly '$DIE_ON_WARN' => 1 ;
+
+
+my $Win ;
+my $TileFall ;
+
+&initialise ;
+
+MainLoop ;
+
+
+sub initialise {
+
+    $Win = MainWindow->new() ;
+    $Win->title( "TileFall" ) ; 
+    $Win->protocol( "WM_DELETE_WINDOW", \&quit ) ;
+ 
+    # Read in config file for user's default options.
+    # For now we'll hard-code
+
+    $TileFall = TileFall->new( -window => $Win, -quit => \&quit, ) ;
+    $TileFall->get( -canvas )->
+        Tk::bind( '<1>', [ \&click1, Ev( 'x' ), Ev( 'y' ) ] ) ;
+    $TileFall->read_options ;
+    $TileFall->centre( $TileFall->get( -window ) ) ;
+    $TileFall->new_game ;
+}
+
+
+sub click1 {
+    my( $canvas, $cx, $cy ) = @_ ;
+
+    return unless defined $cx and defined $cy ;
+
+    my $ratio = $TileFall->get( '-length' ) * $TileFall->get( -scale ) ;
+
+    $TileFall->click( 
+        int( $canvas->canvasx( $cx ) / $ratio ), 
+        int( $canvas->canvasy( $cy ) / $ratio ) ) ;
+}
+
+
+sub quit {
+    
+    $TileFall->write_options ;
+    $Win->destroy ;
+}
+
+
+
+__END__
+
+=pod SCRIPT CATEGORIES
+
+Games
+
+=pod DESCRIPTION
+
+Perl/Tk clone of the TileFall game
+
+This game is based on TileFall which was originally written for the Amiga and
+Psion by Adam Dawes.
+
+=pod PREREQUISITES
+
+Pragmas:
+
+C<strict>
+C<lib>
+C<readonly>
+
+Modules:
+C<Carp>
+C<FindBin>
+C<GameBoard>
+C<Symbol>
+C<TileFall>
+C<Tk>
+C<Tk::MesgBox>
+
+=pod COREQUISITES
+
+=pod OSNAMES
+
+Developed under:
+Linux/X-Windows
+
+Known to run under:
+Win32
+
+=pod LICENSE
+
+GPL.
+
+=cut

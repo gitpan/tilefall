@@ -1,0 +1,115 @@
+TileFall
+
+1. SYNOPSIS
+2. REQUIREMENTS
+3. FILES
+4. INSTALLATION
+5. CHANGES
+6. COPYRIGHT
+
+
+1. SYNOPSIS
+
+This game is based on TileFall which was originally written for the Amiga and
+Psion by Adam Dawes.
+
+On-line help is provided - start up the game and click the Help button or press F1. 
+
+
+2. REQUIREMENTS
+
+Perl 5.004 or higher
+Tk 800.000 or higher
+Linux/X windows or Win32
+
+Non-standard modules & pragmas (all supplied):
+readonly.pm
+GameBoard.pm
+MesgBox.pm 
+TileFall.pm
+
+The game was developed under Debian GNU/Linux 2.0.
+
+~60K disk space.
+
+
+3. FILES
+
+GameBoard.pm
+MesgBox.pm
+README
+TileFall.pm
+debian-menu
+readonly.pm
+tilefall
+tilefall-icon-16x16.xpm
+
+TileFall will create a directory in your home directory called '.games' and a
+file in that directory called 'tilefallrc'. On Win32 machines it will create
+a file called 'TILEFALL.INI' in the directory it is invoked from.
+
+
+4. INSTALLATION
+
+Note that TileFall can be installed pretty well anywhere - the only restriction
+is that all the files must be together in the same directory.
+
+# Create the directories.
+mkdir /usr/games
+mkdir /usr/games/tilefall
+
+# Copy the tar.gz to the game directory.
+cp tilefall-VERSION.tar.gz /usr/games
+
+# Change to the games directory.
+cd /usr/games
+
+# Unpack the archive using method A or B:
+# Method A for those using GNU tar
+tar xvfz tilefall-VERSION.tar.gz
+# Method B for those not using GNU tar
+gunzip tilefall-VERSION.tar.gz
+tar xvf tilefall-VERSION.tar
+
+# Change to the tilefall directory.
+cd tilefall
+
+# The tar should have done this automatically: 
+mkdir Tk
+mv MesgBox.pm Tk/
+
+# Make sure tilefall is executable.
+chmod a+x tilefall
+
+# Optional for Debianites. If you want tilefall to appear on your X menu do
+# the following:
+cp debian-menu /etc/menu/tilefall
+update-menus
+# Note that the name of the file supplied, 'debian-menu', is changed in the
+# move to 'tilefall'. Note also that if you haven't used the paths given here you
+# must change the command path in /etc/menu/tilefall. The addition to the menu
+# will only appear when the window manager is restarted.
+
+# To run tilefall from the command line:
+/usr/games/tilefall/tilefall &
+
+# You could always either alias this or use a soft link to a directory on the
+# path to save typing the whole path. 
+
+
+5. CHANGES
+
+2000/04/22
+
+First public release.
+
+
+6. COPYRIGHT
+
+Copyright (c) Mark Summerfield 2000. All Rights Reserved.
+TileFall may be used/distributed under the GPL.
+
+Contact: <summer@perlpress.com> - please include 'tilefall' in the
+subject line. 
+
+
